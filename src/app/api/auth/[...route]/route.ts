@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getTokensFromCode, getLinkedProfiles } from '../../../../services/bungie-auth';
+
+import { parse_linked_profiles } from '../../../../../core_logic/build/dev/javascript/core_logic/profile/parser.mjs';
+import { SignJWT } from 'jose';
 
 export const runtime = 'edge';
 
@@ -24,7 +28,53 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ rout
     }
 
     if (action === 'callback') {
-        return NextResponse.json({ message: "Processing Callback" });
+        const url = new URL(req.url);
+        const code = url.searchParams.get('code');
+
+        if (!code) {
+            return NextResponse.json({ error: "Missing code" }, { status: 400 });
+        }
+
+        try {
+            // 1. Exchange Code for Tokens
+            const tokens = await getTokensFromCode(code);
+
+            // 2. Fetch Profile
+            // We use '254' (BungieNext) temporarily to find linked profiles if membershipId is generic.
+            // But tokens return 'membership_id'.
+            const profileData = await getLinkedProfiles(tokens.access_token, tokens.membership_id);
+
+            // 3. Parse with Gleam
+            // We need to stringify because Gleam expects a JSON string to parse.
+            const profileJson = JSON.stringify(profileData);
+            const characters = parse_linked_profiles(profileJson);
+
+            // 4. Create Session (Simplified for First Light)
+            // In production, we'd encrypt this properly.
+            const secret = new TextEncoder().encode(process.env.BUNGIE_CLIENT_SECRET || 'secret');
+            const session = await new SignJWT({
+                membershipId: tokens.membership_id,
+                accessToken: tokens.access_token,
+                characters: characters // Store parsed info in session for easy access
+            })
+                .setProtectedHeader({ alg: 'HS256' })
+                .setExpirationTime('1h')
+                .sign(secret);
+
+            const response = NextResponse.redirect(new URL('/dashboard', req.url));
+            response.cookies.set('session', session, {
+                httpOnly: true,
+                secure: true,
+                path: '/',
+                sameSite: 'lax'
+            });
+
+            return response;
+
+        } catch (error) {
+            console.error("Auth Callback Error:", error);
+            return NextResponse.json({ error: "Auth failed", details: String(error) }, { status: 500 });
+        }
     }
 
     return NextResponse.json({ error: "Unknown auth action" }, { status: 400 });
