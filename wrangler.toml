@@ -3,11 +3,11 @@ compatibility_date = "2024-04-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".vercel/output/static"
 
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "armoury-db"
-# database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # Placeholder
+[[d1_databases]]
+binding = "DB"
+database_name = "armoury-db"
+database_id = "b86f47d1-46a0-4423-a46e-0392d3a6dc5d"
 
-# [[kv_namespaces]]
-# binding = "MANIFEST_CACHE"
-# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # Placeholder
+[[kv_namespaces]]
+binding = "MANIFEST_CACHE"
+id = "8795299e485a470096586c57f720a5eb"
