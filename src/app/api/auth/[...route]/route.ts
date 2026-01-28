@@ -7,7 +7,20 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ rout
     const action = route[0];
 
     if (action === 'login') {
-        return NextResponse.json({ message: "Initiating Login Flow", url: "https://www.bungie.net/en/OAuth/Authorize?..." });
+        const clientId = process.env.BUNGIE_CLIENT_ID;
+        if (!clientId) {
+            return NextResponse.json({ error: "Missing BUNGIE_CLIENT_ID" }, { status: 500 });
+        }
+
+        // Construct Bungie OAuth URL
+        // Scope is typically basic profile, but we might need more later.
+        // state parameter should be used for CSRF protection in production.
+        const redirectUrl = new URL('https://www.bungie.net/en/OAuth/Authorize');
+        redirectUrl.searchParams.set('client_id', clientId);
+        redirectUrl.searchParams.set('response_type', 'code');
+        // redirectUrl.searchParams.set('state', 'SOME_RANDOM_STATE'); // TODO: Add state
+
+        return NextResponse.redirect(redirectUrl);
     }
 
     if (action === 'callback') {
