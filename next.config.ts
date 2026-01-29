@@ -5,7 +5,11 @@ import { setupDevPlatform } from "@cloudflare/next-on-pages/next-dev";
 // (when running the application with `next dev`)
 if (process.env.NODE_ENV === "development") {
   (async () => {
-    await setupDevPlatform();
+    try {
+      await setupDevPlatform();
+    } catch (e) {
+      console.warn("Failed to setup Cloudflare Dev Platform:", e);
+    }
   })();
 }
 

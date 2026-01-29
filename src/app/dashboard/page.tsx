@@ -23,7 +23,13 @@ export default async function Dashboard() {
     let characters: Character[] = [];
 
     try {
-        const secret = new TextEncoder().encode(process.env.BUNGIE_CLIENT_SECRET || 'secret');
+        const secretValue = process.env.BUNGIE_CLIENT_SECRET;
+        if (!secretValue) {
+            console.error("Missing BUNGIE_CLIENT_SECRET");
+            // In production, force a logout or show error without crashing
+            return <div className="p-10 text-center text-red-400">System Error: Missing Configuration</div>;
+        }
+        const secret = new TextEncoder().encode(secretValue);
         const { payload } = await jwtVerify(sessionCookie.value, secret);
         // Cast generic payload to expected type
         characters = payload.characters as Character[];
