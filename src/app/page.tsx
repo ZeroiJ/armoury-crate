@@ -1,4 +1,4 @@
-import Link from 'next/link';
+// eslint-disable-next-line @next/next/no-html-link-for-pages
 
 
 
@@ -20,7 +20,8 @@ export default function Home() {
         </p>
 
         <div className="mt-10">
-          <Link
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a
             href="/api/auth/login"
             className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30 bg-white text-black font-semibold hover:text-white"
           >
@@ -28,7 +29,7 @@ export default function Home() {
             <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
               -&gt;
             </span>
-          </Link>
+          </a>
         </div>
       </div>
 
