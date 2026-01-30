@@ -3,6 +3,11 @@ compatibility_date = "2024-04-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".vercel/output/static"
 
+[vars]
+BUNGIE_CLIENT_ID = "51437"
+BUNGIE_API_KEY = "fc889064fa9a4020a74af3a2ee584a42"
+BUNGIE_CLIENT_SECRET = "GOWj7qxqS3RXXD7d1pohg4AX2nGl1-nM8abdlah55EY"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "armoury-db"
