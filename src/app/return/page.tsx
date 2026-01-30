@@ -56,7 +56,8 @@ function AuthReturnContent() {
 
                 if (!response.ok) {
                     const text = await response.text();
-                    setError(`Token exchange failed: ${response.status} - ${text}`);
+                    console.error('Bungie token error:', text);
+                    setError(`Bungie rejected the request (${response.status}): ${text}`);
                     return;
                 }
 
