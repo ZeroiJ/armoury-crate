@@ -33,17 +33,19 @@ function AuthReturnContent() {
             try {
                 // Get credentials from environment
                 const clientId = process.env.NEXT_PUBLIC_BUNGIE_CLIENT_ID;
+                const clientSecret = process.env.NEXT_PUBLIC_BUNGIE_CLIENT_SECRET;
 
-                if (!clientId) {
-                    setError('Missing Bungie Client ID in environment.');
+                if (!clientId || !clientSecret) {
+                    setError('Missing Bungie credentials in environment.');
                     return;
                 }
 
-                // Public OAuth clients don't use client_secret
+                // Confidential OAuth - includes client_secret
                 const body = new URLSearchParams({
                     grant_type: 'authorization_code',
                     code,
                     client_id: clientId,
+                    client_secret: clientSecret,
                 });
 
                 const response = await fetch(TOKEN_URL, {
