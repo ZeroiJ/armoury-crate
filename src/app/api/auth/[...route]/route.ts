@@ -12,8 +12,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ rout
 
     if (action === 'login') {
         const clientId = process.env.BUNGIE_CLIENT_ID;
+        console.log("Auth Login: Checking Client ID");
+
         if (!clientId) {
-            return NextResponse.json({ error: "Missing BUNGIE_CLIENT_ID" }, { status: 500 });
+            console.error("Auth Error: BUNGIE_CLIENT_ID is missing from environment variables.");
+            return NextResponse.json({
+                error: "Configuration Error",
+                message: "BUNGIE_CLIENT_ID is not defined. Please check Cloudflare Pages settings."
+            }, { status: 500 });
         }
 
         // Construct Bungie OAuth URL
