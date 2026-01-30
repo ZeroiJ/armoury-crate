@@ -3,32 +3,33 @@ import { NextResponse } from 'next/server';
 export const runtime = 'edge';
 
 export async function GET() {
+    // Step 1: Basic response test
+    console.log('[Login] Step 1: Handler invoked');
+
     try {
-        console.log('[Auth Login] Starting...');
-
+        // Step 2: Check env vars
         const clientId = process.env.BUNGIE_CLIENT_ID;
-
-        console.log('[Auth Login] BUNGIE_CLIENT_ID present:', !!clientId);
+        console.log('[Login] Step 2: BUNGIE_CLIENT_ID exists:', !!clientId);
 
         if (!clientId) {
-            console.error('[Auth Login] BUNGIE_CLIENT_ID is missing!');
             return NextResponse.json({
-                error: 'Configuration Error',
-                message: 'BUNGIE_CLIENT_ID is not defined. Please check Cloudflare Pages settings.'
+                error: 'BUNGIE_CLIENT_ID missing',
+                step: 2
             }, { status: 500 });
         }
 
-        const redirectUrl = new URL('https://www.bungie.net/en/OAuth/Authorize');
-        redirectUrl.searchParams.set('client_id', clientId);
-        redirectUrl.searchParams.set('response_type', 'code');
+        // Step 3: Build redirect URL
+        console.log('[Login] Step 3: Building redirect URL');
+        const url = `https://www.bungie.net/en/OAuth/Authorize?client_id=${clientId}&response_type=code`;
 
-        console.log('[Auth Login] Redirecting to Bungie...');
+        // Step 4: Redirect
+        console.log('[Login] Step 4: Redirecting to:', url);
+        return NextResponse.redirect(url);
 
-        return NextResponse.redirect(redirectUrl.toString());
     } catch (error) {
-        console.error('[Auth Login] Unexpected error:', error);
+        console.error('[Login] Uncaught error:', error);
         return NextResponse.json({
-            error: 'Unexpected Error',
+            error: 'Unexpected error',
             message: String(error)
         }, { status: 500 });
     }
