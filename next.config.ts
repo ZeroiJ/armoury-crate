@@ -25,6 +25,15 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Rewrite to preserve existing Bungie redirect URL
+  async rewrites() {
+    return [
+      {
+        source: '/api/auth/callback',
+        destination: '/return',
+      },
+    ];
+  },
 };
 
 export default nextConfig;
