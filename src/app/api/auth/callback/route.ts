@@ -7,53 +7,56 @@ export const runtime = 'edge';
 const TOKEN_URL = 'https://www.bungie.net/platform/app/oauth/token/';
 
 /**
- * Server-side OAuth Callback Endpoint
- * Exchanges code for tokens SERVER-SIDE (no Origin header sent)
- * @security client_secret never exposed to browser
+ * Server-side OAuth Callback Endpoint - SAFETY MODE
+ * Full error visibility for debugging
  */
 export async function GET(req: NextRequest) {
-    const url = new URL(req.url);
-    const code = url.searchParams.get('code');
-    const state = url.searchParams.get('state');
-
-    console.log('[Auth Callback] Received callback');
-
-    // Validate state
-    const cookieStore = await cookies();
-    const storedState = cookieStore.get('oauth_state')?.value;
-
-    if (!state || state !== storedState) {
-        console.error('[Auth Callback] State mismatch - possible CSRF attack');
-        return NextResponse.json({ error: 'Invalid state parameter' }, { status: 400 });
-    }
-
-    // Clear state cookie
-    cookieStore.delete('oauth_state');
-
-    if (!code) {
-        console.error('[Auth Callback] No code in callback');
-        return NextResponse.json({ error: 'Missing authorization code' }, { status: 400 });
-    }
-
-    // Get server-side secrets (never exposed to client)
-    const clientId = process.env.BUNGIE_CLIENT_ID;
-    const clientSecret = process.env.BUNGIE_CLIENT_SECRET;
-
-    if (!clientId || !clientSecret) {
-        console.error('[Auth Callback] Missing server credentials');
-        return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
-
+    // SAFETY: Wrap everything in try/catch
     try {
-        console.log('[Auth Callback] Exchanging code for tokens (server-to-server)');
+        console.log('[Auth Callback] === START ===');
 
-        // Server-to-server request - NO Origin header sent
-        // This bypasses the OriginHeaderDoesNotMatchKey error
+        // STEP 1: Check environment variables FIRST
+        const clientId = process.env.BUNGIE_CLIENT_ID;
+        const clientSecret = process.env.BUNGIE_CLIENT_SECRET;
+
+        console.log('[Auth Callback] Env check - CLIENT_ID exists:', !!clientId);
+        console.log('[Auth Callback] Env check - CLIENT_SECRET exists:', !!clientSecret);
+
+        if (!clientId || !clientSecret) {
+            throw new Error(`Missing Env Vars: CLIENT_ID=${!!clientId}, CLIENT_SECRET=${!!clientSecret}`);
+        }
+
+        // STEP 2: Get URL params
+        const url = new URL(req.url);
+        const code = url.searchParams.get('code');
+        const state = url.searchParams.get('state');
+
+        console.log('[Auth Callback] Received - code:', !!code, 'state:', !!state);
+
+        if (!code) {
+            throw new Error('Missing authorization code in callback URL');
+        }
+
+        // STEP 3: Validate state (CSRF protection)
+        const cookieStore = await cookies();
+        const storedState = cookieStore.get('oauth_state')?.value;
+
+        console.log('[Auth Callback] State check - stored:', !!storedState, 'received:', !!state);
+
+        if (!state || state !== storedState) {
+            throw new Error(`State mismatch: stored=${storedState}, received=${state}`);
+        }
+
+        // Clear state cookie
+        cookieStore.delete('oauth_state');
+
+        // STEP 4: Exchange code for tokens (SERVER-TO-SERVER - NO ORIGIN HEADER)
+        console.log('[Auth Callback] Exchanging code for tokens...');
+
         const tokenResponse = await fetch(TOKEN_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-                // Do NOT send Origin header - this is key
             },
             body: new URLSearchParams({
                 grant_type: 'authorization_code',
@@ -63,19 +66,20 @@ export async function GET(req: NextRequest) {
             }),
         });
 
+        console.log('[Auth Callback] Token response status:', tokenResponse.status);
+
         if (!tokenResponse.ok) {
             const errorText = await tokenResponse.text();
             console.error('[Auth Callback] Token exchange failed:', errorText);
-            return NextResponse.json({
-                error: 'Token exchange failed',
-                details: errorText
-            }, { status: 500 });
+            throw new Error(`Token exchange failed (${tokenResponse.status}): ${errorText}`);
         }
 
         const tokenData = await tokenResponse.json();
-        console.log('[Auth Callback] Token exchange successful');
+        console.log('[Auth Callback] Token data received, membership_id:', tokenData.membership_id);
 
-        // Create session JWT
+        // STEP 5: Create JWT session
+        console.log('[Auth Callback] Creating JWT session...');
+
         const secret = new TextEncoder().encode(clientSecret);
         const session = await new SignJWT({
             membershipId: tokenData.membership_id,
@@ -88,9 +92,9 @@ export async function GET(req: NextRequest) {
             .setExpirationTime('7d')
             .sign(secret);
 
-        console.log('[Auth Callback] Session created, redirecting to dashboard');
+        console.log('[Auth Callback] JWT created, redirecting to dashboard...');
 
-        // Set HttpOnly session cookie
+        // STEP 6: Set cookie and redirect
         const response = NextResponse.redirect(new URL('/dashboard', req.url));
         response.cookies.set('bnet_session', session, {
             httpOnly: true,
@@ -100,13 +104,18 @@ export async function GET(req: NextRequest) {
             path: '/',
         });
 
+        console.log('[Auth Callback] === SUCCESS ===');
         return response;
 
     } catch (error) {
-        console.error('[Auth Callback] Unexpected error:', error);
+        // SAFETY: Catch everything and display the error
+        const err = error as Error;
+        console.error('[Auth Callback] === CRASH ===', err.message, err.stack);
+
         return NextResponse.json({
-            error: 'Internal server error',
-            details: String(error)
+            error: err.message,
+            stack: err.stack,
+            timestamp: new Date().toISOString(),
         }, { status: 500 });
     }
 }
