@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokensFromCode, getLinkedProfiles } from '../../../../services/bungie-auth';
-
-import { parse_linked_profiles } from '../../../../../core_logic/build/dev/javascript/core_logic/profile/parser.mjs';
 import { SignJWT } from 'jose';
 
 export const runtime = 'edge';
@@ -22,13 +20,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ rout
             }, { status: 500 });
         }
 
-        // Construct Bungie OAuth URL
-        // Scope is typically basic profile, but we might need more later.
-        // state parameter should be used for CSRF protection in production.
         const redirectUrl = new URL('https://www.bungie.net/en/OAuth/Authorize');
         redirectUrl.searchParams.set('client_id', clientId);
         redirectUrl.searchParams.set('response_type', 'code');
-        // redirectUrl.searchParams.set('state', 'SOME_RANDOM_STATE'); // TODO: Add state
 
         return NextResponse.redirect(redirectUrl);
     }
@@ -46,22 +40,21 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ rout
             const tokens = await getTokensFromCode(code);
 
             // 2. Fetch Profile
-            // We use '254' (BungieNext) temporarily to find linked profiles if membershipId is generic.
-            // But tokens return 'membership_id'.
             const profileData = await getLinkedProfiles(tokens.access_token, tokens.membership_id);
 
             // 3. Parse with Gleam
-            // We need to stringify because Gleam expects a JSON string to parse.
             const profileJson = JSON.stringify(profileData);
+
+            // Dynamic import to prevent route crash if Gleam module fails to load
+            const { parse_linked_profiles } = await import('../../../../../core_logic/build/dev/javascript/core_logic/profile/parser.mjs');
             const characters = parse_linked_profiles(profileJson);
 
-            // 4. Create Session (Simplified for First Light)
-            // In production, we'd encrypt this properly.
+            // 4. Create Session
             const secret = new TextEncoder().encode(process.env.BUNGIE_CLIENT_SECRET || 'secret');
             const session = await new SignJWT({
                 membershipId: tokens.membership_id,
                 accessToken: tokens.access_token,
-                characters: characters // Store parsed info in session for easy access
+                characters: characters
             })
                 .setProtectedHeader({ alg: 'HS256' })
                 .setExpirationTime('1h')
