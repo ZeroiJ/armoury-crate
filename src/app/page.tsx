@@ -1,6 +1,26 @@
-// eslint-disable-next-line @next/next/no-html-link-for-pages
+'use client';
 
+const BUNGIE_AUTH_URL = 'https://www.bungie.net/en/OAuth/Authorize';
 
+function startAuth() {
+  const clientId = process.env.NEXT_PUBLIC_BUNGIE_CLIENT_ID;
+
+  if (!clientId) {
+    alert('Missing BUNGIE_CLIENT_ID');
+    return;
+  }
+
+  // Generate and store state for CSRF protection
+  const state = crypto.randomUUID();
+  localStorage.setItem('authorizationState', state);
+
+  const url = new URL(BUNGIE_AUTH_URL);
+  url.searchParams.set('client_id', clientId);
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('state', state);
+
+  window.location.href = url.toString();
+}
 
 export default function Home() {
   return (
@@ -14,37 +34,36 @@ export default function Home() {
           Armoury Vault
         </h1>
         <p className="mt-4 text-xl text-gray-400 max-w-2xl">
-          Secure, High-Performance Destiny 2 Backend & Dashboard.
+          Secure, High-Performance Destiny 2 Backend &amp; Dashboard.
           <br />
-          Powered by Next.js & Gleam.
+          Powered by Next.js.
         </p>
 
         <div className="mt-10">
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a
-            href="/api/auth/login"
-            className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30 bg-white text-black font-semibold hover:text-white"
+          <button
+            onClick={startAuth}
+            className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30 bg-white text-black font-semibold hover:text-white cursor-pointer"
           >
             Login with Bungie
             <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
               -&gt;
             </span>
-          </a>
+          </button>
         </div>
       </div>
 
       <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-3 lg:text-left mt-20 gap-8">
         <FeatureCard
           title="Secure"
-          desc="HttpOnly Sessions & encrypted tokens. No client-side secrets."
+          desc="OAuth 2.0 with Bungie.net for safe authentication."
         />
         <FeatureCard
           title="Fast"
-          desc="Edge-deployed on Cloudflare Pages with D1 & KV."
+          desc="Edge-deployed on Cloudflare Pages."
         />
         <FeatureCard
-          title="Polyglot"
-          desc="Core logic powered by robust, type-safe Gleam code."
+          title="Open Source"
+          desc="Built with Next.js and TypeScript."
         />
       </div>
     </div>
